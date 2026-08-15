@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,10 +13,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, LogOut, Sun, Moon } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function DashboardHeader() {
-  const { data: session } = useSession();
   const [dark, setDark] = useState(false);
+  const { user, logout } = useAuth();
 
   const toggleDark = () => {
     setDark(!dark);
@@ -28,7 +28,7 @@ export function DashboardHeader() {
     <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
       <div className="flex items-center gap-4">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-primary">✦</span> SaaSKit
+          <span className="text-primary">✦</span> TitouneOS
         </Link>
       </div>
 
@@ -41,13 +41,13 @@ export function DashboardHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={session?.user?.image || ""} />
+                <AvatarImage src="" />
                 <AvatarFallback>
-                  {session?.user?.name?.charAt(0) || "U"}
+                  {user?.name?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden text-sm font-medium lg:inline-block">
-                {session?.user?.name || "Utilisateur"}
+                {user?.name || "Utilisateur"}
               </span>
             </Button>
           </DropdownMenuTrigger>
@@ -63,7 +63,7 @@ export function DashboardHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={logout}
             >
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion

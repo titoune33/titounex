@@ -1,8 +1,7 @@
 // src/components/auth/signin-form.tsx
 "use client";
 
-import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,41 +14,35 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 
-function SignInFormInner() {
+export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
-  const errorParam = searchParams.get("error");
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard/dashboard";
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleCredentialsSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-      callbackUrl,
-    });
-
-    setLoading(false);
-    if (result?.error) {
-      setError("Email ou mot de passe invalide.");
-    } else if (result?.ok) {
-      router.push(callbackUrl);
-      router.refresh();
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message || "Une erreur est survenue.");
     }
+    setLoading(false);
   };
 
   const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl });
+    // Redirige vers le backend pour OAuth Google
+    const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
+    window.location.href = `${backend}/api/auth/google/authorize?callbackUrl=${encodeURIComponent(callbackUrl)}`;
   };
 
   return (
@@ -62,8 +55,18 @@ function SignInFormInner() {
       <Card className="relative w-full max-w-md animate-fade-in border-border/50 shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+            <svg
+              className="h-6 w-6 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
+              />
             </svg>
           </div>
           <CardTitle className="text-2xl font-bold">Bienvenue sur TitouneOS</CardTitle>
@@ -90,10 +93,10 @@ function SignInFormInner() {
             </div>
           </div>
 
-          <form onSubmit={handleCredentialsSignIn} className="space-y-4">
-            {(error || errorParam) && (
+          <form onSubmit={handleSignIn} className="space-y-4">
+            {error && (
               <div className="rounded-md bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-                {error ?? "Une erreur s'est produite."}
+                {error}
               </div>
             )}
             <div className="space-y-2">
@@ -111,7 +114,7 @@ function SignInFormInner() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -128,19 +131,11 @@ function SignInFormInner() {
           <p className="text-sm text-muted-foreground">
             Pas de compte ?{" "}
             <Link href="/auth/signup" className="font-medium text-primary hover:underline">
-              Creer un compte
+              Créer un compte
             </Link>
           </p>
         </CardFooter>
       </Card>
     </div>
-  );
-}
-
-export function SignInForm() {
-  return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <SignInFormInner />
-    </Suspense>
   );
 }

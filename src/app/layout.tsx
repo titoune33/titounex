@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { SessionProvider } from "@/components/session-provider";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import "@/app/globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "SaaSKit — Build your SaaS faster",
+  title: "TitouneOS — L'OS unifié pour vos connecteurs Vibe Work",
   description:
-    "A production-ready SaaS starter kit with Next.js, TypeScript, Prisma, NextAuth, Stripe, and Tailwind CSS.",
+    "Centralisez, automatisez et optimisez tous vos outils avec l'IA. 35+ connecteurs intégrés, IA native, dashboard unifié. Gagnez 10h/semaine.",
+  keywords:
+    "SaaS, automatisation, IA, connecteurs, workflow, Zapier, Notion, Gmail, Stripe",
+  authors: [{ name: "TitouneOS" }],
 };
 
 export default function RootLayout({
@@ -18,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
@@ -26,7 +29,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionProvider>{children}</SessionProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

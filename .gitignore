@@ -7,3 +7,4 @@ out
 .DS_Store
 ai-backend.log
 .vercel
+.env*

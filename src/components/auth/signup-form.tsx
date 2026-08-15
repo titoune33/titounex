@@ -1,8 +1,7 @@
 // src/components/auth/signup-form.tsx
 "use client";
 
-import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,11 +14,11 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 
-function SignUpFormInner() {
+export default function SignUpForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const { login } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,20 +46,8 @@ function SignUpFormInner() {
         setLoading(false);
         return;
       }
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-        callbackUrl,
-      });
-      if (result?.error) {
-        setError("Compte cree mais la connexion a echoue. Connectez-vous manuellement.");
-        router.push("/auth/signin");
-        setLoading(false);
-      } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
-      }
+      // Auto login after registration
+      await login(email, password);
     } catch {
       setError("Erreur reseau. Reessayez.");
       setLoading(false);
@@ -68,7 +55,8 @@ function SignUpFormInner() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl });
+    const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
+    window.location.href = `${backend}/api/auth/google/authorize?callbackUrl=%2Fdashboard%2Fdashboard`;
   };
 
   return (
@@ -81,8 +69,18 @@ function SignUpFormInner() {
       <Card className="relative w-full max-w-md animate-fade-in border-border/50 shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21C7.043 21 4.862 20.355 3 19.234z" />
+            <svg
+              className="h-6 w-6 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21C7.043 21 4.862 20.355 3 19.234z"
+              />
             </svg>
           </div>
           <CardTitle className="text-2xl font-bold">Creer votre compte</CardTitle>
@@ -118,7 +116,7 @@ function SignUpFormInner() {
               <Input id="email" type="email" placeholder="hello@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-2">
-              <Input id="password" type="password" placeholder="•••••••• (8+ caracteres)" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
+              <Input id="password" type="password" placeholder="Mot de passe (8+ caracteres)" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
             </div>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
               {loading ? "Creation..." : "Creer le compte"}
@@ -136,13 +134,5 @@ function SignUpFormInner() {
         </CardFooter>
       </Card>
     </div>
-  );
-}
-
-export function SignUpForm() {
-  return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <SignUpFormInner />
-    </Suspense>
   );
 }

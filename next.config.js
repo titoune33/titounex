@@ -3,7 +3,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Pas de static export pour Vercel — permet le SSR pour next-auth
+  // Mode SSR pour Vercel (nécessaire pour next-auth)
 };
 
 module.exports = nextConfig;
