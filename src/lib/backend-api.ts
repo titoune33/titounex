@@ -1,11 +1,12 @@
-// TitouneOS — API client (proxy vers le backend FastAPI)
-// Backend local : http://localhost:8001
-// Backend prod : https://titounex-backend.onrender.com
+// src/lib/backend-api.ts
+// TitouneOS — API client unifié (proxy vers le backend FastAPI)
 
 import axios from "axios";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001",
+  baseURL: BACKEND_URL,
   timeout: 30000,
 });
 
@@ -25,7 +26,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err: any) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("tp_token");
       window.location.href = "/auth/signin";
     }
@@ -33,7 +34,18 @@ api.interceptors.response.use(
   }
 );
 
-// === ENDPOINTS IA ===
+// === AUTH ===
+export const login = (email: string, password: string) =>
+  api.post("/api/auth/login", { email, password });
+
+export const register = (name: string, email: string, password: string) =>
+  api.post("/api/auth/register", { name, email, password });
+
+export const loginWithGoogle = (callbackUrl: string = "/dashboard/dashboard") => {
+  window.location.href = `${BACKEND_URL}/api/auth/google?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+};
+
+// === IA ===
 export const summarize = (text: string) => api.post("/api/ai/summarize", { text });
 export const generateText = (prompt: string, options?: Record<string, unknown>) =>
   api.post("/api/ai/generate", { prompt, ...options });

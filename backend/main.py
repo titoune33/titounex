@@ -4,6 +4,7 @@ L'OS unifié pour tous vos connecteurs Vibe Work.
 
 API IA native : proxy vers ton llm-gateway existant (DeepSeek/Mistral/Nemotron).
 Fonctionnalités : résumés, génération, classification, recherche, extraction.
+Auth : JWT + bcrypt + Google OAuth (mode callback).
 
 Démarrage :
     cd backend && python main.py
@@ -11,9 +12,21 @@ Démarrage :
 """
 
 import os
-from fastapi import FastAPI, HTTPException
+import json
+import hashlib
+from datetime import datetime, timedelta, timezone
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, JSONResponse
+from pydantic import BaseModel
+from jose import jwt
+from passlib.context import CryptContext
 import uvicorn
+
+# === CONFIG ===
+SECRET_KEY = os.getenv("SECRET_KEY", "titounex-secret-dev-2026")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24h
 
 app = FastAPI(
     title="TitouneOS API",
@@ -21,7 +34,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — autorise ton frontend Vercel
+# CORS
 origins = os.getenv("CORS_ORIGIN", "https://titounex.vercel.app,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -31,12 +44,145 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# === DB en mémoire (SQLite/PostgreSQL en prod) ===
+# Format: { email: {"id": str, "name": str, "email": str, "hashed_password": str, "plan": str} }
+USERS_DB: dict = {}
+TOKENS_DB: dict = {}
+
+# Demo user (seeding)
+demo_email = os.getenv("DEMO_EMAIL", "demo@talentpulse.app")
+demo_password_hash = pwd_context.hash("demo1234")
+USERS_DB[demo_email] = {
+    "id": "usr_001",
+    "name": "Demo User",
+    "email": demo_email,
+    "hashed_password": demo_password_hash,
+    "plan": "pro",
+    "role": "user",
+}
+
+
+# === MODELS ===
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+
+# === AUTH HELPERS ===
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_token(user: dict):
+    """Crée un JWT token"""
+    to_encode = {
+        "sub": user["id"],
+        "email": user["email"],
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def get_current_user(request: Request):
+    """Extrait le JWT du header Authorization"""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header[7:]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("email")
+        if not email or email not in USERS_DB:
+            return None
+        return USERS_DB[email]
+    except Exception:
+        return None
+
+
+# === ENDPOINTS ===
 
 @app.get("/api/health")
 async def health():
     """Health check pour le monitoring"""
     return {"status": "ok", "service": "TitouneOS API", "version": "1.0.0"}
 
+
+# --- AUTH ---
+
+@app.post("/api/auth/login")
+async def login(req: LoginRequest):
+    """Authentification par email + mot de passe"""
+    user = USERS_DB.get(req.email)
+    if not user or not verify_password(req.password, user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+
+    token = create_token(user)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {"id": user["id"], "name": user["name"], "email": user["email"], "plan": user["plan"]},
+    }
+
+
+@app.post("/api/auth/register")
+async def register(req: RegisterRequest):
+    """Inscription d'un nouvel utilisateur"""
+    if req.email in USERS_DB:
+        raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+
+    user = {
+        "id": f"usr_{len(USERS_DB) + 1:03d}",
+        "name": req.name,
+        "email": req.email,
+        "hashed_password": pwd_context.hash(req.password),
+        "plan": "free",  # Plan gratuit par défaut
+        "role": "user",
+    }
+    USERS_DB[req.email] = user
+
+    token = create_token(user)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {"id": user["id"], "name": user["name"], "email": user["email"], "plan": user["plan"]},
+    }
+
+
+@app.get("/api/auth/google")
+async def google_auth(callbackUrl: str = "https://titounex.vercel.app/dashboard/dashboard"):
+    """Redirect vers Google OAuth — callback à implémenter selon ton fournisseur"""
+    # En mode MVP, on redirige vers une page simulant l'auth Google
+    # Le frontend gère ensuite le callback
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    redirect_uri = f"{os.getenv('BACKEND_URL', 'http://localhost:8001')}/api/auth/google/callback"
+    google_url = (
+        f"https://accounts.google.com/o/oauth/authorize?"
+        f"client_id={google_client_id}&redirect_uri={redirect_uri}"
+        f"&scope=email profile&response_type=code&access_type=offline"
+    )
+    return {"auth_url": google_url, "callback_url": callbackUrl}
+
+
+@app.get("/api/auth/me")
+async def get_current(request: Request):
+    """Retourne l'utilisateur connecté"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    return {"user": {"id": user["id"], "name": user["name"], "email": user["email"], "plan": user["plan"]}}
+
+
+# --- IA ENDPOINTS ---
 
 @app.get("/api/ai/models")
 async def get_models():
@@ -52,15 +198,12 @@ async def get_models():
     }
 
 
-# ============ IA ENDPOINTS ============
-
 @app.post("/api/ai/summarize")
 async def summarize(payload: dict):
     """Résumé automatique de texte via IA"""
     text = payload.get("text", "")
     if not text:
         raise HTTPException(status_code=400, detail="Texte requis")
-    # TODO: proxy vers llm-gateway
     return {"summary": f"[Résumé IA] {text[:100]}...", "model": "deepseek-v4-flash-0731", "cost_usd": 0.001}
 
 
@@ -88,10 +231,10 @@ async def extract(payload: dict):
     text = payload.get("text", "")
     if not text:
         raise HTTPException(status_code=400, detail="Texte requis")
-    return {"data": {"montant": 0, "date": "", "fourreur": ""}, "model": "deepseek-v4-flash-0731"}
+    return {"data": {"montant": 0, "date": "", "fournisseur": ""}, "model": "deepseek-v4-flash-0731"}
 
 
-# ============ CONNECTEURS ENDPOINTS ============
+# --- CONNECTEURS ---
 
 @app.get("/api/connectors")
 async def list_connectors():
@@ -104,7 +247,7 @@ async def list_connectors():
             {"id": "deepwiki", "name": "DeepWiki", "category": "ai-research", "status": "active"},
             {"id": "scholar_gateway", "name": "Scholar Gateway", "category": "ai-research", "status": "active"},
             {"id": "structured_extraction", "name": "Structured Extraction", "category": "ai-research", "status": "active"},
-            {"id": "userLibrary", "name": "User Library", "category": "ai-research", "status": "active"},
+            {"id": "user_library", "name": "User Library", "category": "ai-research", "status": "active"},
             {"id": "morningstar", "name": "Morningstar", "category": "business", "status": "active"},
             {"id": "trivago", "name": "Trivago", "category": "business", "status": "active"},
             {"id": "gmail", "name": "Gmail", "category": "productivity", "status": "token"},
@@ -115,7 +258,7 @@ async def list_connectors():
     }
 
 
-# ============ WORKFLOW ENDPOINTS ============
+# --- WORKFLOWS ---
 
 @app.post("/api/workflows/execute")
 async def execute_workflow(payload: dict):
@@ -123,14 +266,13 @@ async def execute_workflow(payload: dict):
     flow = payload.get("flow", {})
     trigger = flow.get("trigger", {})
     nodes = flow.get("nodes", [])
-    
+
     results = []
     for node in nodes:
         node_type = node.get("type")
         node_data = node.get("data", {})
-        
+
         if node_type == "ai":
-            # Appel IA
             ai_type = node_data.get("aiType", "summarize")
             if ai_type == "summarize":
                 result = {"type": "summarize", "output": "Résumé généré"}
@@ -142,9 +284,9 @@ async def execute_workflow(payload: dict):
                 result = {"type": ai_type, "output": "Résultat IA"}
         else:
             result = {"type": node_type, "output": "Action exécutée"}
-        
+
         results.append(result)
-    
+
     return {"workflow_id": "wf_123", "status": "completed", "results": results}
 
 
