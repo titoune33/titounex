@@ -4,6 +4,5 @@
     "env": {
       "NEXT_PUBLIC_BACKEND_URL": "https://titounex-backend.onrender.com"
     }
-  },
-  "functions": {}
+  }
 }
