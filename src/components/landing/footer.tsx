@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Github, Twitter } from "lucide-react";
+import { Github, Twitter, Linkedin } from "lucide-react";
 
 const productLinks = [
   { href: "/#features", label: "Fonctionnalités" },
@@ -23,30 +23,30 @@ const legalLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/60 bg-white py-12 lg:py-16">
+    <footer className="border-t border-gray-200 bg-white py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link
               href="/"
-              className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground"
+              className="flex items-center gap-2 text-xl font-bold tracking-tight text-gray-900"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-                SK
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+                T
               </span>
-              SaaSKit
+              TitouneOS
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Le boilerplate Next.js pour lancer votre SaaS en 48 heures.
-              Auth, paiements, dashboard — tout est prêt.
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-gray-600">
+              L'OS unifié pour tous vos connecteurs Vibe Work. IA native, 35+ connecteurs,
+              automatisations intelligentes.
             </p>
             <div className="mt-5 flex items-center gap-3">
               <a
-                href="https://github.com"
+                href="https://github.com/titoune33/titounex"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                 aria-label="GitHub"
               >
                 <Github className="h-4 w-4" />
@@ -55,23 +55,32 @@ export function Footer() {
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                 aria-label="Twitter"
               >
                 <Twitter className="h-4 w-4" />
+              </a>
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-4 w-4" />
               </a>
             </div>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className="text-sm font-semibold text-foreground">Produit</h4>
+            <h4 className="text-sm font-semibold text-gray-900">Produit</h4>
             <ul className="mt-4 space-y-2.5">
               {productLinks.map((l) => (
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-sm text-gray-600 transition-colors hover:text-indigo-600"
                   >
                     {l.label}
                   </Link>
@@ -82,15 +91,13 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <h4 className="text-sm font-semibold text-foreground">
-              Ressources
-            </h4>
+            <h4 className="text-sm font-semibold text-gray-900">Ressources</h4>
             <ul className="mt-4 space-y-2.5">
               {resourceLinks.map((l) => (
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-sm text-gray-600 transition-colors hover:text-indigo-600"
                   >
                     {l.label}
                   </Link>
@@ -101,13 +108,13 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="text-sm font-semibold text-foreground">Légal</h4>
+            <h4 className="text-sm font-semibold text-gray-900">Légal</h4>
             <ul className="mt-4 space-y-2.5">
               {legalLinks.map((l) => (
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-sm text-gray-600 transition-colors hover:text-indigo-600"
                   >
                     {l.label}
                   </Link>
@@ -118,8 +125,8 @@ export function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-12 border-t border-border/60 pt-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} SaaSKit. Tous droits réservés.
+        <div className="mt-12 border-t border-gray-200 pt-6 text-center text-sm text-gray-600">
+          © {new Date().getFullYear()} TitouneOS. Tous droits réservés.
         </div>
       </div>
     </footer>

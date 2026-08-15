@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function CTA() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-purple-600 py-20 lg:py-28">
+    <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 py-20 lg:py-28">
       {/* Background decorations */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-10 left-10 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
@@ -30,11 +30,10 @@ export function CTA() {
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button
               size="lg"
-              variant="default"
               asChild
-              className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-shadow bg-white text-primary font-semibold"
+              className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-shadow bg-white text-indigo-700 font-semibold hover:bg-gray-100"
             >
-              <Link href="/auth/register">
+              <Link href="/auth/signin">
                 Commencer gratuitement
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

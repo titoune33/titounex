@@ -39,9 +39,9 @@ export function Navbar() {
           className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-            SK
+            T
           </span>
-          SaaSKit
+          TitouneOS
         </Link>
 
         {/* Desktop links */}
