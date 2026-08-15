@@ -14,15 +14,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!loading && !user) {
       router.push("/auth/signin");
     }
-  }, [user, isLoading, router]);
+  }, [user, loading, router]);
 
-  if (isLoading || !user) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
