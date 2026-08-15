@@ -3,9 +3,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    // Garde le build pour le static mais permet les pages dynamiques
-  },
+  // Pas de static export pour Vercel — permet le SSR pour next-auth
 };
 
 module.exports = nextConfig;
