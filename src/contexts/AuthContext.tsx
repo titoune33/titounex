@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/backend-api";
+import api, { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle } from "@/lib/backend-api";
 
 interface User {
   id: string;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem("tp_token");
     const userData = localStorage.getItem("tp_user");
-    
+
     if (token && userData) {
       try {
         const parsed = JSON.parse(userData);
@@ -54,9 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const res = await api.post("/api/auth/login", { email, password });
+      const res = await apiLogin(email, password);
       const { access_token, user: userData } = res.data;
-      
       localStorage.setItem("tp_token", access_token);
       localStorage.setItem("tp_user", JSON.stringify(userData));
       setUser(userData);
@@ -69,23 +68,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithGoogle = () => {
-    const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
-    const callbackUrl = encodeURIComponent(window.location.origin + "/dashboard/dashboard");
-    window.location.href = `${backend}/api/auth/google?callbackUrl=${callbackUrl}`;
+    apiLoginWithGoogle("/dashboard/dashboard");
   };
 
   const register = async (name: string, email: string, password: string) => {
     setLoading(true);
     try {
-      const res = await api.post("/api/auth/register", { name, email, password });
+      const res = await apiRegister(name, email, password);
       const { access_token, user: userData } = res.data;
-      
       localStorage.setItem("tp_token", access_token);
       localStorage.setItem("tp_user", JSON.stringify(userData));
       setUser(userData);
       router.push("/dashboard/dashboard");
     } catch (err: any) {
-      throw new Error(err.response?.data?.detail || "Erreur d'inscription");
+      throw new Error(err.response?.data?.detail || err.response?.data?.error || "Erreur d'inscription");
     } finally {
       setLoading(false);
     }

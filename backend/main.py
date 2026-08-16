@@ -15,13 +15,14 @@ import os
 import json
 import hashlib
 from datetime import datetime, timedelta, timezone
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
 from jose import jwt
 from passlib.context import CryptContext
 import uvicorn
+import requests as http_requests
 
 # === CONFIG ===
 SECRET_KEY = os.getenv("SECRET_KEY", "titounex-secret-dev-2026")
@@ -160,17 +161,93 @@ async def register(req: RegisterRequest):
 
 @app.get("/api/auth/google")
 async def google_auth(callbackUrl: str = "https://titounex.vercel.app/dashboard/dashboard"):
-    """Redirect vers Google OAuth — callback à implémenter selon ton fournisseur"""
-    # En mode MVP, on redirige vers une page simulant l'auth Google
-    # Le frontend gère ensuite le callback
-    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
-    redirect_uri = f"{os.getenv('BACKEND_URL', 'http://localhost:8001')}/api/auth/google/callback"
+    """Retourne l'URL d'autorisation Google OAuth pour que le frontend redirige."""
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        raise HTTPException(status_code=500, detail="Google OAuth non configuré sur le backend")
+
+    backend_base = os.getenv("BACKEND_URL", os.getenv("NEXT_PUBLIC_BACKEND_URL", "http://localhost:8001"))
+    redirect_uri = f"{backend_base}/api/auth/google/callback"
+
     google_url = (
         f"https://accounts.google.com/o/oauth/authorize?"
-        f"client_id={google_client_id}&redirect_uri={redirect_uri}"
+        f"client_id={client_id}&redirect_uri={redirect_uri}"
         f"&scope=email profile&response_type=code&access_type=offline"
+        f"&prompt=consent"
     )
     return {"auth_url": google_url, "callback_url": callbackUrl}
+
+
+@app.get("/api/auth/google/callback")
+async def google_callback(
+    code: str = Query(None),
+    callbackUrl: str = "https://titounex.vercel.app/dashboard/dashboard",
+):
+    """Échange le code Google contre un token, puis crée/retourne l'utilisateur."""
+    if not code:
+        raise HTTPException(status_code=400, detail="Code d'autorisation manquant")
+
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="Google OAuth non configuré sur le backend")
+
+    backend_base = os.getenv("BACKEND_URL", os.getenv("NEXT_PUBLIC_BACKEND_URL", "http://localhost:8001"))
+
+    token_resp = http_requests.post("https://oauth2.googleapis.com/token", data={
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": f"{backend_base}/api/auth/google/callback",
+    }, timeout=15)
+
+    if token_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Échec de l'authentification Google")
+
+    token_data = token_resp.json()
+    access_token = token_data.get("access_token")
+
+    user_resp = http_requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=15,
+    )
+
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Impossible de récupérer les infos Google")
+
+    google_user = user_resp.json()
+    email = google_user.get("email", "")
+    name = google_user.get("name", email.split("@")[0] if email else "Utilisateur")
+
+    # Crée l'utilisateur s'il n'existe pas (pas de mot de passe = connexion Google)
+    if email not in USERS_DB:
+        user = {
+            "id": f"usr_{len(USERS_DB) + 1:03d}",
+            "name": name,
+            "email": email,
+            "hashed_password": "",
+            "plan": "free",
+            "role": "user",
+            "provider": "google",
+        }
+        USERS_DB[email] = user
+
+    user = USERS_DB[email]
+    token = create_token(user)
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "plan": user["plan"],
+        },
+        "callback_url": callbackUrl,
+    }
 
 
 @app.get("/api/auth/me")

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignUpForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,33 +30,21 @@ export default function SignUpForm() {
     e.preventDefault();
     setError(null);
     if (password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caracteres.");
+      setError("Le mot de passe doit contenir au moins 8 caractères.");
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "Une erreur est survenue.");
-        setLoading(false);
-        return;
-      }
-      // Auto login after registration
-      await login(email, password);
-    } catch {
-      setError("Erreur reseau. Reessayez.");
+      await register(name, email, password);
+    } catch (err: any) {
+      setError(err.message || "Erreur réseau. Réessayez.");
+    } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = () => {
-    const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
-    window.location.href = `${backend}/api/auth/google/authorize?callbackUrl=%2Fdashboard%2Fdashboard`;
+    loginWithGoogle();
   };
 
   return (
@@ -83,8 +71,8 @@ export default function SignUpForm() {
               />
             </svg>
           </div>
-          <CardTitle className="text-2xl font-bold">Creer votre compte</CardTitle>
-          <CardDescription>Commencez a centraliser vos outils</CardDescription>
+          <CardTitle className="text-2xl font-bold">Créer votre compte</CardTitle>
+          <CardDescription>Commencez à centraliser vos outils</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -108,25 +96,54 @@ export default function SignUpForm() {
           </div>
 
           <form onSubmit={handleSignUp} className="space-y-4">
-            {error && <div className="rounded-md bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{error}</div>}
+            {error && (
+              <div className="rounded-md bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
-              <Input id="name" type="text" placeholder="Votre nom" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+              <Input
+                id="name"
+                type="text"
+                placeholder="Votre nom"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                required
+              />
             </div>
             <div className="space-y-2">
-              <Input id="email" type="email" placeholder="hello@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="hello@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </div>
             <div className="space-y-2">
-              <Input id="password" type="password" placeholder="Mot de passe (8+ caracteres)" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
+              <Input
+                id="password"
+                type="password"
+                placeholder="Mot de passe (8+ caractères)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+                minLength={8}
+              />
             </div>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
-              {loading ? "Creation..." : "Creer le compte"}
+              {loading ? "Création..." : "Créer le compte"}
             </Button>
           </form>
         </CardContent>
 
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
-            Deja un compte ?{" "}
+            Déjà un compte ?{" "}
             <Link href="/auth/signin" className="font-medium text-primary hover:underline">
               Se connecter
             </Link>

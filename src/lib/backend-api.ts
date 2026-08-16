@@ -41,9 +41,24 @@ export const login = (email: string, password: string) =>
 export const register = (name: string, email: string, password: string) =>
   api.post("/api/auth/register", { name, email, password });
 
-export const loginWithGoogle = (callbackUrl: string = "/dashboard/dashboard") => {
-  window.location.href = `${BACKEND_URL}/api/auth/google?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-};
+export interface AuthResult {
+  access_token: string;
+  token_type: string;
+  user: { id: string; name: string; email: string; plan: string };
+}
+
+/**
+ * Google OAuth — appelle le backend pour récupérer l'URL d'autorisation Google,
+ * puis redirige l'utilisateur navigateur vers Google.
+ */
+export async function loginWithGoogle(callbackUrl: string = "/dashboard/dashboard"): Promise<void> {
+  const res = await api.get("/api/auth/google", { params: { callbackUrl } });
+  const { auth_url } = res.data;
+  if (!auth_url) {
+    throw new Error("Google OAuth non configuré");
+  }
+  window.location.href = auth_url;
+}
 
 // === IA ===
 export const summarize = (text: string) => api.post("/api/ai/summarize", { text });

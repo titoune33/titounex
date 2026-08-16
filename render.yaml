@@ -9,3 +9,13 @@ services:
     envVars:
       - key: CORS_ORIGIN
         value: https://titounex.vercel.app,http://localhost:3000
+      - key: BACKEND_URL
+        value: https://titounex-backend.onrender.com
+      - key: NEXT_PUBLIC_BACKEND_URL
+        value: https://titounex-backend.onrender.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SECRET_KEY
+        sync: false

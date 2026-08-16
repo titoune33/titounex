@@ -7,3 +7,5 @@ out/
 backend/.venv/
 backend/__pycache__/
 backend/dev.db
+.vercel
+.env*

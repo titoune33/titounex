@@ -20,7 +20,7 @@ export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard/dashboard";
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,9 +40,7 @@ export default function SignInForm() {
   };
 
   const handleGoogleSignIn = () => {
-    // Redirige vers le backend pour OAuth Google
-    const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
-    window.location.href = `${backend}/api/auth/google/authorize?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+    loginWithGoogle();
   };
 
   return (
